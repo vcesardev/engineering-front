@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Flex, Spinner, Box } from "@chakra-ui/react";
 import Chart, { Props as ChartProps } from "react-apexcharts";
@@ -21,18 +21,35 @@ const Home: React.FC = () => {
     {} as ChartProps
   );
 
-  const loadChartData = useCallback(async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const requestInfo = async (filter: "day" | "month"): Promise<any> => {
     try {
       const { data } = await axios.get(
-        "http://ec2-3-131-153-153.us-east-2.compute.amazonaws.com:3000/bitcoin/"
+        "http://ec2-3-131-153-153.us-east-2.compute.amazonaws.com:3000/bitcoin/",
+        {
+          params: {
+            filterBy: filter,
+          },
+        }
       );
+      return data;
+    } catch (err) {
+      throw new Error("It was not possible to fetch bitcoin data.");
+    }
+  };
 
-      //parse standard graph info
-      const updatedGraphData: UpdatedChart = arrayStandardGraphParser(data);
+  const loadChartsData = async (): Promise<void> => {
+    try {
+      const monthData = await requestInfo("month");
+      const dailyData = await requestInfo("day");
+
+      // parse standard graph info
+      const updatedGraphData: UpdatedChart =
+        arrayStandardGraphParser(monthData);
       const graphInfo = dataStandardGraphParser(updatedGraphData);
 
-      //parse candlestick graph info
-      const updatedCandlestickData = arrayCandlestickGraphParser(data);
+      // parse candlestick graph info
+      const updatedCandlestickData = arrayCandlestickGraphParser(dailyData);
       const candlestickGraphInfo = dataCandlestickGraphParser(
         updatedCandlestickData
       );
@@ -42,13 +59,14 @@ const Home: React.FC = () => {
 
       setLoading(false);
     } catch (err) {
-      setLoading(false);
+      console.log("err");
     }
-  }, []);
+  };
 
   useEffect(() => {
-    loadChartData();
-  }, [loadChartData]);
+    loadChartsData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Flex direction={"column"}>
